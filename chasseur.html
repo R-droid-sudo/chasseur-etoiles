@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chasseur d'Étoiles</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #222;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        font-family: "Arial", sans-serif;
+        overflow: hidden; /* Empêche de scroller */
+      }
+      canvas {
+        background-color: #000;
+        border: 4px solid #444;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        background-image: radial-gradient(#333 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
+      h1 {
+        margin-bottom: 10px;
+        font-size: 24px;
+      }
+      p {
+        color: #aaa;
+        margin-top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🦸‍♂️ Le Chasseur d'Étoiles ⭐</h1>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <p>Utilise les flèches ⬅️ et ➡️ pour bouger !</p>
+
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // --- VARIABLES DU JEU ---
+      let score = 0;
+      let jeuActif = true;
+
+      // Le Héros
+      const hero = {
+        x: 275, // Position horizontale de départ
+        y: 330, // Position verticale (proche du bas)
+        taille: 40,
+        vitesse: 5,
+        apparence: "🦸‍♂️",
+      };
+
+      // Liste des objets qui tombent
+      let objets = [];
+
+      // Touches du clavier
+      let toucheGauche = false;
+      let toucheDroite = false;
+
+      // --- ÉCOUTEURS CLAVIER (Pour bouger) ---
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") toucheGauche = true;
+        if (e.key === "ArrowRight") toucheDroite = true;
+
+        // Redémarrer avec Espace si perdu
+        if (!jeuActif && e.code === "Space") {
+          document.location.reload();
+        }
+      });
+
+      document.addEventListener("keyup", (e) => {
+        if (e.key === "ArrowLeft") toucheGauche = false;
+        if (e.key === "ArrowRight") toucheDroite = false;
+      });
+
+      // --- FONCTIONS DU JEU ---
+
+      function creerObjet() {
+        // 90% de chance de créer une étoile, 10% un monstre (augmente avec le temps)
+        let estMonstre = Math.random() < 0.2;
+
+        objets.push({
+          x: Math.random() * (canvas.width - 30),
+          y: -30, // Commence au dessus de l'écran
+          vitesse: 2 + Math.random() * 3, // Vitesse aléatoire
+          type: estMonstre ? "monstre" : "etoile",
+          apparence: estMonstre ? "👾" : "⭐",
+        });
+      }
+
+      function dessiner() {
+        // 1. Effacer l'écran
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!jeuActif) {
+          // Écran de fin
+          ctx.fillStyle = "white";
+          ctx.font = "40px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+          ctx.font = "20px Arial";
+          ctx.fillText(
+            "Score final : " + score,
+            canvas.width / 2,
+            canvas.height / 2 + 40
+          );
+          ctx.fillText(
+            "Appuie sur ESPACE pour rejouer",
+            canvas.width / 2,
+            canvas.height / 2 + 80
+          );
+          return;
+        }
+
+        // 2. Dessiner le Héros
+        ctx.font = "40px Arial";
+        ctx.fillText(hero.apparence, hero.x, hero.y + hero.taille);
+
+        // 3. Dessiner et bouger les objets
+        for (let i = 0; i < objets.length; i++) {
+          let obj = objets[i];
+
+          // Faire descendre l'objet
+          obj.y += obj.vitesse;
+
+          // Dessiner l'objet
+          ctx.fillText(obj.apparence, obj.x, obj.y + 30);
+
+          // --- GESTION DES COLLISIONS ---
+          // Si l'objet touche le héros (calcul de distance simple)
+          if (
+            obj.x < hero.x + hero.taille &&
+            obj.x + 30 > hero.x &&
+            obj.y < hero.y + hero.taille &&
+            obj.y + 30 > hero.y
+          ) {
+            if (obj.type === "etoile") {
+              score += 10;
+              objets.splice(i, 1); // Supprimer l'étoile
+              i--;
+            } else {
+              jeuActif = false; // Touché par un monstre !
+            }
+          }
+
+          // Supprimer si l'objet sort de l'écran
+          if (obj.y > canvas.height) {
+            objets.splice(i, 1);
+            i--;
+          }
+        }
+
+        // 4. Afficher le score
+        ctx.fillStyle = "white";
+        ctx.font = "20px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("Score: " + score, 10, 30);
+      }
+
+      function boucleDeJeu() {
+        if (jeuActif) {
+          // Déplacer le héros
+          if (toucheGauche && hero.x > 0) hero.x -= hero.vitesse;
+          if (toucheDroite && hero.x < canvas.width - hero.taille)
+            hero.x += hero.vitesse;
+
+          // Créer des objets de temps en temps (environ tous les 40 cycles)
+          if (Math.random() < 0.03) creerObjet();
+        }
+
+        dessiner();
+        requestAnimationFrame(boucleDeJeu); // Relancer la boucle
+      }
+
+      // Démarrer le jeu
+      boucleDeJeu();
+    </script>
+  </body>
+</html>
